@@ -6,6 +6,8 @@
 #define UNITE_FINALIZATION_P2P
 
 #include <serialize.h>
+#include <primitives/block.h>
+#include <chainparams.h>
 
 /*
  * Implementation of UIP-21.
@@ -13,6 +15,7 @@
 
 class CNode;
 class CNetMsgMaker;
+class CValidationState;
 
 namespace finalization {
 namespace p2p {
@@ -88,11 +91,19 @@ struct CommitsResponse {
 //!
 //! Collect commits in between the most recent common block hash and stop condition.
 bool ProcessGetCommits(CNode *node, const CommitsLocator &locator, const CNetMsgMaker &msgMaker,
-                       const CChainParams &params);
+                       const CChainParams &chainparams);
 
 //! \brief Process the "commits" message
-bool ProcessNewCommits(const CommitsResponse &commits, const CChainParams &chainparams,
-                       CValidationState &validation_state, uint256 *failed_block_out);
+bool ProcessNewCommits(CNode *node, const CommitsResponse &commits, const CNetMsgMaker &msgMaker,
+                       const CChainParams &chainparams, CValidationState &validation_state,
+                       uint256 *failed_block_out);
+
+//! \brief Returns a CommitsLocator
+//! locator.start = [finalized-checkpoint,.. checkpoints,.. start]
+//! locator.stop = stop
+CommitsLocator GetCommitsLocator(const CBlockIndex *start, const CBlockIndex *stop);
+
+void OnBlock(const uint256 &block_hash);
 
 } // p2p
 } // finalization

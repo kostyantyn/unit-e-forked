@@ -61,6 +61,9 @@ BETTER_ENUM(
  * you probably would add it here.
  */
 class FinalizationStateData {
+ public:
+  bool operator==(const FinalizationStateData &other) const;
+
  protected:
   FinalizationStateData(const AdminParams &adminParams);
   FinalizationStateData(const FinalizationStateData &) = default;
@@ -148,10 +151,18 @@ class FinalizationStateData {
  */
 class FinalizationState : public FinalizationStateData {
  public:
+  enum Status {
+    NEW,
+    FROM_COMMITS,
+    CONFIRMED,
+  };
+
   FinalizationState(const esperanza::FinalizationParams &params,
                     const esperanza::AdminParams &adminParams);
-  FinalizationState(const FinalizationState &parent);
-  FinalizationState(FinalizationState &&) = default;
+  FinalizationState(const FinalizationState &parent, Status status = NEW);
+  FinalizationState(FinalizationState &&parent);
+  bool operator==(const FinalizationState &other) const;
+  bool operator!=(const FinalizationState &other) const;
 
   //! \brief If the block height passed is the first of a new epoch, then we prepare the
   //! new epoch.
@@ -226,11 +237,6 @@ class FinalizationState : public FinalizationStateData {
   static void Reset(const esperanza::FinalizationParams &params,
                     const esperanza::AdminParams &admin_params);
 
-  //! \brief Initialize empty finalization state for current tip.
-  //! It's a workaround for prune mode. We will get rid of it by restoring finalization
-  //! state from commits.
-  static void ResetToTip(const CBlockIndex &block_index);
-
   //! \brief Returns the finalization state for the given block.
   static FinalizationState *GetState(const CBlockIndex *block = nullptr);
 
@@ -238,9 +244,12 @@ class FinalizationState : public FinalizationStateData {
   uint32_t GetEpoch(const CBlockIndex &blockIndex) const;
   uint32_t GetEpoch(blockchain::Height blockHeight) const;
 
+  //! \brief Returns the height of the first block of the epoch.
+  blockchain::Height GetEpochHeight(uint32_t epoch) const;
+
   static bool ValidateDepositAmount(CAmount amount);
 
-  //! \brief Processes the next chain tip passed.
+  //! \brief Processes the next chain (active or alternative) tip passed.
   //!
   //! This method encapsulates all the logic necessary to make the finalization
   //! state progress by one block.
@@ -261,6 +270,18 @@ class FinalizationState : public FinalizationStateData {
 
   //! \brief Returns whether block on height blockHeight is finalized checkpoint
   bool IsFinalizedCheckpoint(blockchain::Height blockHeight) const;
+
+  //! \brief Returns the status of the state
+  Status GetStatus() const;
+
+  //! \brief Returns whether this state is processed neither by block nor commits
+  bool IsNew() const;
+
+  //! \brief Returns whether this state is processed from commits
+  bool IsFromCommits() const;
+
+  //! \brief Returns whether this state is processed from full block
+  bool IsConfirmed() const;
 
  private:
   //!In case there is nobody available to finalize we finalize automatically.
@@ -294,6 +315,7 @@ class FinalizationState : public FinalizationStateData {
   ufp64::ufp64_t GetDepositScaleFactor(uint32_t epoch) const;
   uint64_t GetTotalSlashed(uint32_t epoch) const;
   Checkpoint &GetCheckpoint(uint32_t epoch);
+  const Checkpoint &GetCheckpoint(uint32_t epoch) const;
   uint64_t GetDynastyDelta(uint32_t dynasty);
   void RegisterLastTx(uint160 &validatorAddress, CTransactionRef tx);
   void ProcessNewCommit(const CTransactionRef &tx);
@@ -302,22 +324,19 @@ class FinalizationState : public FinalizationStateData {
 
  protected:
   const FinalizationParams &m_settings;
+  Status m_status = NEW;
 
  private:
   void OnBlock(blockchain::Height blockHeight);
-  void TrimCache();
 };
-
-//! Global version of FinalizationState::ProcessNewTip. Unlike that, this function creates
-//! new instance of the state basing on the state of the previous block.
-bool ProcessNewTip(const CBlockIndex &block_index, const CBlock &block);
-
-//! Restore finalization state for actual active chain
-void RestoreFinalizationState(const CChainParams &chainparams);
 
 inline uint32_t GetEpochLength() { return FinalizationState::GetState()->GetEpochLength(); }
 inline uint32_t GetEpoch(const CBlockIndex &blockIndex) { return FinalizationState::GetState()->GetEpoch(blockIndex); }
 inline uint32_t GetEpoch(blockchain::Height blockHeight) { return FinalizationState::GetState()->GetEpoch(blockHeight); }
+inline blockchain::Height GetEpochHeight(uint32_t epoch) { return FinalizationState::GetState()->GetEpochHeight(epoch); }
+inline uint32_t GetLastFinalizedEpoch() { return FinalizationState::GetState()->GetLastFinalizedEpoch(); }
+inline uint32_t GetCurrentEpoch() { return FinalizationState::GetState()->GetCurrentEpoch(); }
+inline bool IsCheckpoint(blockchain::Height blockHeight) { return FinalizationState::GetState()->IsCheckpoint(blockHeight); };
 
 }  // namespace esperanza
 

@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <finalization/cache.h>
 #include <keystore.h>
 #include <test/esperanza/finalization_utils.h>
 #include <test/esperanza/finalizationstate_utils.h>
@@ -120,11 +121,12 @@ BOOST_AUTO_TEST_CASE(register_last_validator_tx) {
   InsecureNewKey(k, true);
 
   uint160 validatorAddress = k.GetPubKey().GetID();
+  uint256 blockhash;
 
   uint256 block_hash;
   CBlockIndex blockIndex;
+  blockIndex.phashBlock = &blockhash;
   blockIndex.nHeight = 1;
-  blockIndex.phashBlock = &block_hash;
   CBlock block;
 
   CMutableTransaction tx;
@@ -218,7 +220,7 @@ CBlockIndex *AddBlock(CBlockIndex *prev) {
   index.phashBlock = &res.first->first;
   index.pprev = prev;
   chainActive.SetTip(&index);
-  esperanza::ProcessNewTip(index, CBlock());
+  assert(finalization::cache::ProcessNewTip(index, CBlock()));
   return &index;
 }
 }  // namespace

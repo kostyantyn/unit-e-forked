@@ -15,7 +15,7 @@ from test_framework.util import *
 class MempoolCoinbaseTest(UnitETestFramework):
     def set_test_params(self):
         self.num_nodes = 2
-        self.extra_args = [["-checkmempool"]] * 2
+        self.extra_args = [["-checkmempool",  '-esperanzaconfig={"epochLength": 99999}']] * 2
 
     alert_filename = None  # Set by setup_network
 
