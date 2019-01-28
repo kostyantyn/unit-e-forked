@@ -1,6 +1,7 @@
 branches:
   only:
     - master
+    - fix_feature_assumevalid
 sudo: required
 dist: trusty
 os: linux
