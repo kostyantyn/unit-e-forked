@@ -213,8 +213,17 @@ class AssumeValidTest(UnitETestFramework):
         assert_equal(self.nodes[1].getblock(self.nodes[1].getbestblockhash())['height'], 2202)
 
         # Send blocks to node2. Block 102 will be rejected.
-        self.send_blocks_until_disconnected(p2p2)
-        self.assert_blockchain_height(self.nodes[2], 101)
+        for i in range(100):
+            self.send_blocks_until_disconnected(p2p2)
+            self.assert_blockchain_height(self.nodes[2], 101)
+            self.nodes[0].disconnect_p2ps()
+            self.nodes[1].disconnect_p2ps()
+            self.nodes[2].disconnect_p2ps()
+            network_thread_join()
+            p2p2 = self.nodes[2].add_p2p_connection(BaseNode())
+            network_thread_start()
+            p2p2.wait_for_verack()
+
 
 if __name__ == '__main__':
     AssumeValidTest().main()

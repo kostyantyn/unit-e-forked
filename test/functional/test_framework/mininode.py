@@ -97,6 +97,7 @@ class P2PConnection(asyncore.dispatcher):
 
         try:
             self.connect((dstaddr, dstport))
+            self.local_port = self.socket.getsockname()[1]
         except:
             self.handle_close()
 
@@ -118,7 +119,8 @@ class P2PConnection(asyncore.dispatcher):
         """asyncore callback when a connection is closed."""
         logger.debug("Closing connection to: %s:%d" % (self.dstaddr, self.dstport))
         self.state = "closed"
-        self.recvbuf = b""
+        print("handle_close", self.recvbuf)
+        # self.recvbuf = b""
         self.sendbuf = b""
         try:
             self.close()
@@ -139,6 +141,11 @@ class P2PConnection(asyncore.dispatcher):
         """asyncore callback when data is read from the socket."""
         t = self.recv(8192)
         if len(t) > 0:
+            filename = self.node.datadir + "/regtest/mininode" + str(self.local_port) + ".dat"
+            file = open(filename, "ab")
+            file.write(t)
+            file.close()
+
             self.recvbuf += t
             self._on_data()
 
@@ -153,7 +160,8 @@ class P2PConnection(asyncore.dispatcher):
                 if len(self.recvbuf) < 4:
                     return
                 if self.recvbuf[:4] != MAGIC_BYTES[self.network]:
-                    raise ValueError("got garbage %s" % repr(self.recvbuf))
+                    m = "got from " + str(self.local_port) + " " + self.state + "garbage %s"
+                    raise ValueError(m % repr(self.recvbuf))
                 if len(self.recvbuf) < 4 + 12 + 4 + 4:
                     return
                 command = self.recvbuf[4:4+12].split(b"\x00", 1)[0]

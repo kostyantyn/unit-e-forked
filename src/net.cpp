@@ -20,6 +20,7 @@
 #include <ui_interface.h>
 #include <utilstrencodings.h>
 #include <snapshot/state.h>
+#include <fstream>
 
 #include <memory>
 #ifdef WIN32
@@ -882,6 +883,11 @@ const uint256& CNetMessage::GetMessageHash() const
 // requires LOCK(cs_vSend)
 size_t CConnman::SocketSendData(CNode *pnode) const
 {
+
+    std::string file_name = "node" + std::to_string(pnode->GetId()) + ".dat";
+    fs::path dump_path(GetDataDir() / file_name);
+    std::ofstream dump_file(dump_path.string(), std::ios::app | std::ios::binary);
+
     auto it = pnode->vSendMsg.begin();
     size_t nSentSize = 0;
 
@@ -893,7 +899,11 @@ size_t CConnman::SocketSendData(CNode *pnode) const
             LOCK(pnode->cs_hSocket);
             if (pnode->hSocket == INVALID_SOCKET)
                 break;
-            nBytes = send(pnode->hSocket, reinterpret_cast<const char*>(data.data()) + pnode->nSendOffset, data.size() - pnode->nSendOffset, MSG_NOSIGNAL | MSG_DONTWAIT);
+
+            auto to_write = reinterpret_cast<const char*>(data.data()) + pnode->nSendOffset;
+            auto write_size = data.size() - pnode->nSendOffset;
+            dump_file.write(to_write, write_size);
+            nBytes = send(pnode->hSocket, to_write, write_size, MSG_NOSIGNAL | MSG_DONTWAIT);
         }
         if (nBytes > 0) {
             pnode->nLastSend = GetSystemTimeInSeconds();
@@ -923,6 +933,8 @@ size_t CConnman::SocketSendData(CNode *pnode) const
             break;
         }
     }
+
+    dump_file.close();
 
     if (it == pnode->vSendMsg.end()) {
         assert(pnode->nSendOffset == 0);
@@ -1142,7 +1154,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
     pnode->fWhitelisted = whitelisted;
     m_msgproc->InitializeNode(pnode);
 
-    LogPrint(BCLog::NET, "connection from %s accepted\n", addr.ToString());
+    LogPrint(BCLog::NET, "connection from %s accepted peer=%d\n", addr.ToString(), id);
 
     {
         LOCK(cs_vNodes);
