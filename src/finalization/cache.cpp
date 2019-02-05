@@ -226,7 +226,7 @@ bool ProcessNewTipWorker(const CBlockIndex &block_index, const CBlock &block) {
   return true;
 }
 
-void TrimCacheIfFinalized(const CBlockIndex &block_index) {
+bool FinalizationHappened(const CBlockIndex &block_index, blockchain::Height *out_height) {
   const auto *prev_state = GetState(*block_index.pprev);
   const auto *new_state = GetState(block_index);
   if (prev_state != nullptr && new_state != nullptr &&
@@ -236,11 +236,22 @@ void TrimCacheIfFinalized(const CBlockIndex &block_index) {
     if ((new_fin_epoch != prev_fin_epoch) ||
         (new_fin_epoch == 0 && new_state->IsFinalizedCheckpoint(new_state->GetEpochLength() - 1))) {
       assert(new_fin_epoch > prev_fin_epoch || new_fin_epoch == 0);
-      const auto height = (new_fin_epoch + 1) * new_state->GetEpochLength() - 1;
-      LogPrint(BCLog::FINALIZATION, "Trimming finalization cache for height < %d\n", height);
-      g_storage.ClearUntilHeight(height);
+      if (out_height != nullptr) {
+        *out_height = (new_fin_epoch + 1) * new_state->GetEpochLength() - 1;
+      }
+      return true;
     }
   }
+  return false;
+}
+
+void TrimCache(blockchain::Height height) {
+  LogPrint(BCLog::FINALIZATION, "Trimming finalization cache for height < %d\n", height);
+  g_storage.ClearUntilHeight(height);
+}
+
+void FinalizeSnapshot(blockchain::Height height) {
+    snapshot::Creator::FinalizeSnapshots(chainActive[height]);
 }
 
 }  // namespace
@@ -270,7 +281,11 @@ bool ProcessNewTip(const CBlockIndex &block_index, const CBlock &block) {
     // The last epoch block will contain the snapshot hash pointing to this snapshot.
     snapshot::Creator::GenerateOrSkip(esperanza::GetCurrentEpoch());
   }
-  TrimCacheIfFinalized(block_index);
+  blockchain::Height finalization_height = 0;
+  if (FinalizationHappened(block_index, &finalization_height)) {
+    TrimCache(finalization_height);
+    FinalizeSnapshot(finalization_height);
+  }
   return true;
 }
 

@@ -9,7 +9,6 @@
 #include <esperanza/vote.h>
 #include <finalization/cache.h>
 #include <script/ismine.h>
-#include <snapshot/creator.h>
 #include <tinyformat.h>
 #include <ufp64.h>
 #include <util.h>
@@ -1019,14 +1018,6 @@ bool FinalizationState::ProcessNewCommits(const CBlockIndex &block_index,
         __func__, block_hash.GetHex());
 
     m_recommendedTargetHash = block_hash;
-
-    // mark snapshots finalized up to the last finalized block
-    blockchain::Height height = (m_lastFinalizedEpoch + 1) * m_settings.epoch_length - 1;
-    if (height == static_cast<blockchain::Height>(block_index.nHeight)) {  // instant confirmation
-      snapshot::Creator::FinalizeSnapshots(&block_index);
-    } else {
-      snapshot::Creator::FinalizeSnapshots(chainActive[height]);
-    }
   }
   m_status = FROM_COMMITS;
   return true;
