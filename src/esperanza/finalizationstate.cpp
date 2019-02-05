@@ -187,8 +187,8 @@ void FinalizationState::IncrementDynasty() {
     m_curDynDeposits += GetDynastyDelta(m_currentDynasty);
     m_dynastyStartEpoch[m_currentDynasty] = epoch;
 
-    LogPrint(BCLog::FINALIZATION, "%s: New current dynasty is %d (%d %d).\n", __func__,
-             m_currentDynasty, m_prevDynDeposits, m_curDynDeposits);
+    LogPrint(BCLog::FINALIZATION, "%s: New current dynasty is %d.\n", __func__,
+             m_currentDynasty);
     // UNIT-E: we can clear old checkpoints (up to lastFinalizedEpoch - 1)
   }
   m_epochToDynasty[epoch] = m_currentDynasty;
@@ -348,7 +348,6 @@ Result FinalizationState::IsVotable(const Validator &validator,
   }
 
   if (targetHash != m_recommendedTargetHash) {
-    LogPrintf("voting for %s, instead of %s, epoch=%d\n", targetHash.GetHex(), m_recommendedTargetHash.GetHex(), GetCurrentEpoch());
     return fail(Result::VOTE_WRONG_TARGET_HASH,
                 "%s: the validator %s is voting for the %s, instead of the "
                 "recommended targetHash %s.\n",
