@@ -90,7 +90,7 @@ class SnapshotCreationTest(UnitETestFramework):
         assert(node.getblocksnapshot(node.getblockhash(18))['snapshot_finalized'])
         assert(node.getblocksnapshot(node.getblockhash(23))['snapshot_finalized'])
         assert(node.getblocksnapshot(node.getblockhash(28))['snapshot_finalized'])
-        assert(node.getblocksnapshot(node.getblockhash(33))['snapshot_finalized'] is False)  # will be finalized
+        assert(node.getblocksnapshot(node.getblockhash(33))['snapshot_finalized'])
         assert(node.getblocksnapshot(node.getblockhash(38))['snapshot_finalized'] is False)  # will be finalized
 
         # test 3. node keeps at least 3 finalized snapshots
