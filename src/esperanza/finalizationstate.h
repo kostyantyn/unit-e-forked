@@ -151,9 +151,9 @@ class FinalizationStateData {
  */
 class FinalizationState : public FinalizationStateData {
  public:
-  // Status is NEW when this onject is just created.
+  // Status is NEW when this object is just created.
   // It's changed to FROM_COMMITS when state processes finalizer commits.
-  // It's changed to CONFIRMED when satte processes finalizer commits from the real block.
+  // It's changed to CONFIRMED when state processes finalizer commits from the real block.
   enum Status {
     NEW,
     FROM_COMMITS,

@@ -122,8 +122,8 @@ private:
     std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;
 
     // The set of all the tips (including active chain).
-    // We use this set to track all concurent tips we have in the current
-    // dynasty. Once one of chains become longest justified, we switch main chain
+    // We use this set to track all concurrent tips we have in the current
+    // dynasty. Once one of chains becomes longest justified, we switch main chain
     // there.
     std::set<CBlockIndex*> chain_tips;
     /**

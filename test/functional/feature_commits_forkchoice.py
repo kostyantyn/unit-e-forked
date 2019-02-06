@@ -6,8 +6,8 @@
 # Functional tests for fork choice rule (longest justified chain).
 # It also inderectly checks initial full sync implementation (commits).
 # * Test that fresh chain chooses the longest justified instead, but shortest in total, chain.
-# * Test that chain with more work switches to longes justified.
-# * Test nodes continues to serve blocks after switch.
+# * Test that chain with more work switches to longest justified.
+# * Test nodes continue to serve blocks after switch.
 # * Test nodes reconnects and chose longest justified chain right after global disconnection.
 
 from test_framework.util import json

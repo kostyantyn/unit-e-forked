@@ -1,3 +1,7 @@
+// Copyright (c) 2019 The Unit-e developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <finalization/cache.h>
 
 #include <chainparams.h>
@@ -314,20 +318,21 @@ bool ProcessNewCommits(const CBlockIndex &block_index, const std::vector<CTransa
              block_index.GetBlockHash().GetHex());
     return false;
   }
+
   switch (state->GetStatus()) {
     case esperanza::FinalizationState::NEW: {
       return state->ProcessNewCommits(block_index, txes);
-    } break;
+    };
     case esperanza::FinalizationState::FROM_COMMITS: {
       LogPrint(BCLog::FINALIZATION, "State for block_hash=%s height=%d has been already processed from commits\n",
                block_index.GetBlockHash().GetHex(), block_index.nHeight);
       return true;
-    } break;
+    };
     case esperanza::FinalizationState::CONFIRMED: {
       LogPrint(BCLog::FINALIZATION, "State for block_hash=%s height=%d has been already processed\n",
                block_index.GetBlockHash().GetHex(), block_index.nHeight);
       return true;
-    } break;
+    };
   }
   // gcc
   assert(not("unreachable"));
