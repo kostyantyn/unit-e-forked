@@ -91,7 +91,8 @@ FinalizationState::FinalizationState(FinalizationState &&parent)
       m_status(parent.m_status) {}
 
 bool FinalizationState::operator==(const FinalizationState &other) const {
-  return static_cast<const FinalizationStateData &>(*this) == static_cast<const FinalizationState &>(other);
+  return static_cast<const FinalizationStateData &>(*this) ==
+         static_cast<const FinalizationStateData &>(other);
 }
 
 bool FinalizationState::operator!=(const FinalizationState &other) const {
@@ -865,7 +866,7 @@ uint32_t FinalizationState::GetEpoch(blockchain::Height blockHeight) const {
   return blockHeight / GetEpochLength();
 }
 
-blockchain::Height FinalizationState::GetEpochHeight(uint32_t epoch) const {
+blockchain::Height FinalizationState::GetEpochStartHeight(uint32_t epoch) const {
   return epoch * m_settings.epoch_length;
 }
 
@@ -1047,12 +1048,6 @@ Checkpoint &FinalizationState::GetCheckpoint(uint32_t epoch) {
   return it->second;
 }
 
-const Checkpoint &FinalizationState::GetCheckpoint(uint32_t epoch) const {
-  const auto it = m_checkpoints.find(epoch);
-  assert(it != m_checkpoints.end());
-  return it->second;
-}
-
 void FinalizationState::RegisterLastTx(uint160 &validatorAddress,
                                        CTransactionRef tx) {
 
@@ -1087,18 +1082,6 @@ bool FinalizationState::IsFinalizedCheckpoint(blockchain::Height blockHeight) co
 
 FinalizationState::Status FinalizationState::GetStatus() const {
   return m_status;
-}
-
-bool FinalizationState::IsNew() const {
-  return m_status == NEW;
-}
-
-bool FinalizationState::IsFromCommits() const {
-  return m_status == FROM_COMMITS;
-}
-
-bool FinalizationState::IsConfirmed() const {
-  return m_status == CONFIRMED;
 }
 
 }  // namespace esperanza

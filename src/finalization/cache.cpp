@@ -30,7 +30,7 @@ class Storage {
                                   FinalizationState::Status required_parent_status);
 
   //! \brief Return state for genesis block
-  FinalizationState *Genesis() const;
+  FinalizationState *GetGenesisState() const;
 
   //! \brief Destroy states for indexes with heights less than `height`
   void ClearUntilHeight(blockchain::Height height);
@@ -77,7 +77,7 @@ class Storage {
   std::atomic<bool> m_restoring;
 } g_storage;
 
-} // namespace
+}  // namespace
 
 // Storage implementation section
 
@@ -87,7 +87,7 @@ FinalizationState *Storage::Find(const CBlockIndex *index) {
     return nullptr;
   }
   if (index->nHeight == 0) {
-    return Genesis();
+    return GetGenesisState();
   }
   const auto it = m_states.find(index);
   if (it == m_states.end()) {
@@ -105,7 +105,7 @@ FinalizationState *Storage::Create(const CBlockIndex *index,
   }
   const auto parent_state = Find(index->pprev);
   if ((parent_state == nullptr) ||
-      (parent_state != Genesis() && parent_state->GetStatus() < required_parent_status)) {
+      (parent_state != GetGenesisState() && parent_state->GetStatus() < required_parent_status)) {
     return nullptr;
   }
   const auto res = m_states.emplace(index, FinalizationState(*parent_state));
@@ -133,7 +133,7 @@ void Storage::ResetToTip(const esperanza::FinalizationParams &params,
                          const CBlockIndex *index) {
   LOCK(cs);
   Reset(params, admin_params);
-  m_states.emplace(index, FinalizationState(*Genesis(), FinalizationState::CONFIRMED));
+  m_states.emplace(index, FinalizationState(*GetGenesisState(), FinalizationState::CONFIRMED));
 }
 
 void Storage::ClearUntilHeight(blockchain::Height height) {
@@ -148,7 +148,7 @@ void Storage::ClearUntilHeight(blockchain::Height height) {
   }
 }
 
-FinalizationState *Storage::Genesis() const {
+FinalizationState *Storage::GetGenesisState() const {
   LOCK(cs);
   return m_genesis_state.get();
 }
@@ -166,12 +166,16 @@ FinalizationState *Storage::Set(const CBlockIndex *block_index, FinalizationStat
 FinalizationState *Storage::Confirm(const CBlockIndex *block_index, FinalizationState &&state, bool *ok_out) {
   assert(block_index != nullptr);
   LOCK(cs);
-  if (ok_out) { *ok_out = true; }
+  if (ok_out) {
+    *ok_out = true;
+  }
   const auto it = m_states.find(block_index);
   assert(it != m_states.end());
   const auto &old_state = it->second;
   if (old_state != state) {
-    if (ok_out) { *ok_out = false; }
+    if (ok_out) {
+      *ok_out = false;
+    }
   }
   m_states.erase(it);
   const auto res = m_states.emplace(block_index, std::move(state));
@@ -190,36 +194,42 @@ bool ProcessNewTipWorker(const CBlockIndex &block_index, const CBlock &block) {
              block_index.GetBlockHash().GetHex());
     return false;
   }
+
   switch (state->GetStatus()) {
-  case FinalizationState::NEW: {
-    if (!state->ProcessNewTip(block_index, block)) {
-      return false;
+    case FinalizationState::NEW: {
+      if (!state->ProcessNewTip(block_index, block)) {
+        return false;
+      }
+      break;
     }
-  } break;
-  case FinalizationState::FROM_COMMITS: {
-    LogPrint(BCLog::FINALIZATION, "State for %s (%d) has been processed from commits, confirming...\n",
-             block_index.GetBlockHash().GetHex(), block_index.nHeight);
-    const auto ancestor_state = g_storage.Find(block_index.pprev);
-    assert(ancestor_state != nullptr);
-    FinalizationState new_state(*ancestor_state);
-    new_state.ProcessNewTip(block_index, block);
-    bool eq;
-    g_storage.Confirm(&block_index, std::move(new_state), &eq);
-    if (!eq) {
-      // UNIT-E TODO: DoS commits sender.
-      LogPrint(BCLog::FINALIZATION, "WARN: After processing the block (%s), its finalization state differs from one given from commits. Overwrite it anyway.\n",
-               block_index.GetBlockHash().GetHex());
-    } else {
-      LogPrint(BCLog::FINALIZATION, "State for %s (%d) confirmed\n",
+
+    case FinalizationState::FROM_COMMITS: {
+      LogPrint(BCLog::FINALIZATION, "State for block_hash=%s heigh=%d has been processed from commits, confirming...\n",
                block_index.GetBlockHash().GetHex(), block_index.nHeight);
+      const auto ancestor_state = g_storage.Find(block_index.pprev);
+      assert(ancestor_state != nullptr);
+      FinalizationState new_state(*ancestor_state);
+      new_state.ProcessNewTip(block_index, block);
+      bool eq;
+      g_storage.Confirm(&block_index, std::move(new_state), &eq);
+      if (!eq) {
+        // UNIT-E TODO: DoS commits sender.
+        LogPrint(BCLog::FINALIZATION, "WARN: After processing the block (%s), its finalization state differs from one given from commits. Overwrite it anyway.\n",
+                 block_index.GetBlockHash().GetHex());
+      } else {
+        LogPrint(BCLog::FINALIZATION, "State for block_hash=%s height=%d confirmed\n",
+                 block_index.GetBlockHash().GetHex(), block_index.nHeight);
+      }
+      break;
     }
-  } break;
-  case FinalizationState::CONFIRMED: {
-    LogPrint(BCLog::FINALIZATION, "State for %s (%d) has been already processed\n",
-             block_index.GetBlockHash().GetHex(), block_index.nHeight);
-    return true;
-  } break;
+
+    case FinalizationState::CONFIRMED: {
+      LogPrint(BCLog::FINALIZATION, "State for block_hash=%s height=%d has been already processed\n",
+               block_index.GetBlockHash().GetHex(), block_index.nHeight);
+      return true;
+    }
   }
+
   if (!g_storage.Restoring()) {
     finalization::p2p::OnBlock(block.GetHash());
   }
@@ -251,7 +261,7 @@ void TrimCache(blockchain::Height height) {
 }
 
 void FinalizeSnapshot(blockchain::Height height) {
-    snapshot::Creator::FinalizeSnapshots(chainActive[height]);
+  snapshot::Creator::FinalizeSnapshots(chainActive[height]);
 }
 
 }  // namespace
@@ -271,7 +281,7 @@ FinalizationState *GetState(const CBlockIndex &block_index) {
 }
 
 bool ProcessNewTip(const CBlockIndex &block_index, const CBlock &block) {
-  LogPrint(BCLog::FINALIZATION, "Process tip %s (%d)\n",
+  LogPrint(BCLog::FINALIZATION, "Process tip block_hash=%s height=%d\n",
            block_index.GetBlockHash().GetHex(), block_index.nHeight);
   if (!ProcessNewTipWorker(block_index, block)) {
     return false;
@@ -290,13 +300,13 @@ bool ProcessNewTip(const CBlockIndex &block_index, const CBlock &block) {
 }
 
 bool ProcessNewTipCandidate(const CBlockIndex &block_index, const CBlock &block) {
-  LogPrint(BCLog::FINALIZATION, "Process candidate tip %s (%d)\n",
+  LogPrint(BCLog::FINALIZATION, "Process candidate tip block_hash=%s height=%d\n",
            block_index.GetBlockHash().GetHex(), block_index.nHeight);
   return ProcessNewTipWorker(block_index, block);
 }
 
 bool ProcessNewCommits(const CBlockIndex &block_index, const std::vector<CTransactionRef> &txes) {
-  LogPrint(BCLog::FINALIZATION, "Process commits %s (%d)\n",
+  LogPrint(BCLog::FINALIZATION, "Process commits block_hash=%s height=%d\n",
            block_index.GetBlockHash().GetHex(), block_index.nHeight);
   const auto state = g_storage.FindOrCreate(&block_index, FinalizationState::FROM_COMMITS);
   if (state == nullptr) {
@@ -305,19 +315,19 @@ bool ProcessNewCommits(const CBlockIndex &block_index, const std::vector<CTransa
     return false;
   }
   switch (state->GetStatus()) {
-  case esperanza::FinalizationState::NEW: {
-    return state->ProcessNewCommits(block_index, txes);
-  } break;
-  case esperanza::FinalizationState::FROM_COMMITS: {
-    LogPrint(BCLog::FINALIZATION, "State for %s (%d) has been already processed from commits\n",
-             block_index.GetBlockHash().GetHex(), block_index.nHeight);
-    return true;
-  } break;
-  case esperanza::FinalizationState::CONFIRMED: {
-    LogPrint(BCLog::FINALIZATION, "State for %s (%d) has been already processed\n",
-             block_index.GetBlockHash().GetHex(), block_index.nHeight);
-    return true;
-  } break;
+    case esperanza::FinalizationState::NEW: {
+      return state->ProcessNewCommits(block_index, txes);
+    } break;
+    case esperanza::FinalizationState::FROM_COMMITS: {
+      LogPrint(BCLog::FINALIZATION, "State for block_hash=%s height=%d has been already processed from commits\n",
+               block_index.GetBlockHash().GetHex(), block_index.nHeight);
+      return true;
+    } break;
+    case esperanza::FinalizationState::CONFIRMED: {
+      LogPrint(BCLog::FINALIZATION, "State for block_hash=%s height=%d has been already processed\n",
+               block_index.GetBlockHash().GetHex(), block_index.nHeight);
+      return true;
+    } break;
   }
   // gcc
   assert(not("unreachable"));
@@ -339,6 +349,7 @@ void Restore(const CChainParams &chainparams) {
     }
     return;
   }
+
   LogPrint(BCLog::FINALIZATION, "Restore finalization state from disk\n");
   g_storage.Reset(chainparams.GetFinalization(), chainparams.GetAdminParams());
   for (int i = 1; i <= chainActive.Height(); ++i) {
@@ -356,5 +367,5 @@ void Reset(const esperanza::FinalizationParams &params,
   g_storage.Reset(params, admin_params);
 }
 
-}
-}
+}  // namespace cache
+}  // namespace finalization

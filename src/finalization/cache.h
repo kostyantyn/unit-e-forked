@@ -12,12 +12,16 @@
 
 //! Finalization state of every CBlockIndex in the current dynasty is cached. Once being
 //! processed, it's stored unless next checkpoint is finalized. Every state is a copy of
-//! the previous one plus new finalized commits give from corresponding block. During
-//! lifetime state changes its status: NEW -> [ FROM_COMMITS ] -> CONFIRMED.
+//! the previous one plus new finalized commits given from corresponding block. During
+//! lifetime state changes its status: NEW -> [ FROM_COMMITS -> ] CONFIRMED.
+//!
+//! Every finalization state is associated with one CBlockIndex (in the current dynasty).
+//! Parent state means the state of the CBlockIndex.pprev. States must be processes
+//! index by index.
 //!
 //! Workflow of the states.
 //!
-//! Prerequirements:
+//! Precondition:
 //! * Create the 0th and empty state for genesis block (by cache::ProcessNewTip).
 //!
 //! The usual life cycle of the state during full sync (longest possible story):
@@ -38,12 +42,11 @@
 //!
 //! !The cache stores only states, it doesn't care about forks!
 
-
 namespace esperanza {
 class FinalizationState;
 struct FinalizationParams;
 struct AdminParams;
-};
+};  // namespace esperanza
 
 class CBlock;
 class CBlockIndex;
@@ -52,27 +55,30 @@ class CChainParams;
 namespace finalization {
 namespace cache {
 
-
-//! Return finalization state of the current active chain tip.
+//! Return the finalization state of the current active chain tip.
 esperanza::FinalizationState *GetState();
 
-//! Return finalization state of the given block_index.
+//! Return the finalization state of the given block_index.
 esperanza::FinalizationState *GetState(const CBlockIndex &block_index);
 
 //! \brief Create new finalization state for given commits.
 //!
 //! If state exists and not NEW, return true.
-//! Otherwise create new state and process it (parent state must exist and be not NEW). Resulting
-//! state's status is FROM_COMMITS
+//! Otherwise create new state and process it (parent state must exist and be not NEW, otherwise
+//! returns false). Resulting state's status is FROM_COMMITS.
+//! The final return value is result of calling to esperanza::FinalizationState::ProcessNewTip.
+//!
 bool ProcessNewCommits(const CBlockIndex &block_index, const std::vector<CTransactionRef> &txes);
 
 //! \brief Create new finalization state for given block_index.
 //!
 //! If state exists and CONFIRMED, return true.
-//! If state exists but processed from COMMITS, reevaluate and compare with one given from commits
-//! Otherwise, create new one (parent state must exist and be CONFIRMED) and process it.
+//! If state exists but processed from COMMITS, reevaluate and compare with one given from commits.
+//! Otherwise, create new one (parent state must exist and be CONFIRMED, otherwise return false)
+//! and process it. Resulting state is CONFIRMED.
+//! The final return value is result of calling to esperanza::FinalizationState::ProcessNewTip.
 //!
-//! This function is supposed to be called when block connecting to any chain in the current
+//! This function is supposed to be called when a block connecting to any chain in the current
 //! dynasty.
 bool ProcessNewTipCandidate(const CBlockIndex &block_index, const CBlock &block);
 
@@ -80,9 +86,10 @@ bool ProcessNewTipCandidate(const CBlockIndex &block_index, const CBlock &block)
 //!
 //! If state exists and CONFIRMED, return true.
 //! If state exists but processed from COMMITS, reevaluate and compare with one given from commits
-//! Otherwise, create new one (parent state must exist and be CONFIRMED) and process it.
+//! Otherwise, create new one (parent state must exist and be CONFIRMED, otherwise return false)
+//! and process it. Resulting state is CONFIRMED.
 //!
-//! This functoin is supposed to be called when block is connecting to the main chain.
+//! This function is supposed to be called when a block is connecting to the main chain.
 bool ProcessNewTip(const CBlockIndex &block_index, const CBlock &block);
 
 //! \brief Restore the cache for actual active chain.
@@ -94,7 +101,7 @@ void Restore(const CChainParams &chainparams);
 void Reset(const esperanza::FinalizationParams &params,
            const esperanza::AdminParams &admin_params);
 
-}
-}
+}  // namespace cache
+}  // namespace finalization
 
 #endif

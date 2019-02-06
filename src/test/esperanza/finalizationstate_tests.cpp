@@ -220,7 +220,8 @@ CBlockIndex *AddBlock(CBlockIndex *prev) {
   index.phashBlock = &res.first->first;
   index.pprev = prev;
   chainActive.SetTip(&index);
-  assert(finalization::cache::ProcessNewTip(index, CBlock()));
+  const bool result = finalization::cache::ProcessNewTip(index, CBlock());
+  BOOST_REQUIRE(result);
   return &index;
 }
 }  // namespace

@@ -3,6 +3,13 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+# Functional tests for fork choice rule (longest justified chain).
+# It also inderectly checks initial full sync implementation (commits).
+# * Test that fresh chain chooses the longest justified instead, but shortest in total, chain.
+# * Test that chain with more work switches to longes justified.
+# * Test nodes continues to serve blocks after switch.
+# * Test nodes reconnects and chose longest justified chain right after global disconnection.
+
 from test_framework.util import json
 from test_framework.util import assert_equal
 from test_framework.util import connect_nodes_bi
@@ -142,7 +149,7 @@ class FinalizationForkChoice(UnitETestFramework):
         # disconnect p0
         # v0: p1, p2
         # p0:
-        # p1: v0,
+        # p1: v0
         # p2: v0
         disconnect_nodes(p0, v0.index)
         disconnect_nodes(p0, p1.index)
@@ -150,7 +157,7 @@ class FinalizationForkChoice(UnitETestFramework):
         # disconnect p2
         # v0: p1
         # p0:
-        # p1: v0,
+        # p1: v0
         # p2:
         disconnect_nodes(p2, v0.index)
 

@@ -3,18 +3,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparams.h>
-#include <validation.h>
-#include <finalization/cache.h>
-#include <finalization/p2p.h>
+#include <consensus/tx_verify.h>
+#include <consensus/validation.h>
 #include <esperanza/checks.h>
 #include <esperanza/finalizationstate.h>
+#include <finalization/cache.h>
+#include <finalization/p2p.h>
 #include <net.h>
-#include <netmessagemaker.h>
-#include <consensus/validation.h>
 #include <net_processing.h>
+#include <netmessagemaker.h>
 #include <snapshot/p2p_processing.h>
 #include <snapshot/state.h>
-#include <consensus/tx_verify.h>
+#include <validation.h>
 
 namespace finalization {
 namespace p2p {
@@ -36,7 +36,7 @@ NodeId MarkReceived(const uint256 &hash) {
   requested_blocks.erase(it);
   return id;
 }
-}
+}  // namespace
 
 std::string CommitsLocator::ToString() const {
   return strprintf("Locator(start=%s, stop=%s)", util::to_string(start), stop.GetHex());
@@ -55,11 +55,13 @@ CBlockIndex *FindMostRecentStart(const CChain &chain, const CommitsLocator &loca
       return last;
     }
     CBlockIndex *const pindex = it->second;
-    if (last == nullptr) { // first hash in `start` must be finalized
+    if (last == nullptr) {  // first hash in `start` must be finalized
       if (!state->IsFinalizedCheckpoint(pindex->nHeight) && pindex != chain.Genesis()) {
         LogPrint(BCLog::FINALIZATION, "The first hash in locator must be finalized checkpoint: %s (%d)\n",
                  h.GetHex(), pindex->nHeight);
-        if (ok != nullptr) *ok = false;
+        if (ok != nullptr) {
+          *ok = false;
+        }
         return nullptr;
       }
       last = pindex;
@@ -93,7 +95,7 @@ HeaderAndCommits FindHeaderAndCommits(CBlockIndex *pindex, const Consensus::Para
   }
   if (!(pindex->nStatus & BLOCK_HAVE_DATA)) {
     LogPrint(BCLog::FINALIZATION, "%s has no data. It's on the main chain, so this shouldn't happen. Stopping.\n",
-              pindex->GetBlockHash().GetHex());
+             pindex->GetBlockHash().GetHex());
     assert(not("No data on the main chain"));
   }
   const std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
@@ -108,7 +110,7 @@ HeaderAndCommits FindHeaderAndCommits(CBlockIndex *pindex, const Consensus::Para
   pindex->ResetCommits(hc.commits);
   return hc;
 }
-} // namespace
+}  // namespace
 
 bool ProcessGetCommits(CNode *node, const CommitsLocator &locator, const CNetMsgMaker &msgMaker,
                        const CChainParams &chainparams) {
@@ -139,27 +141,26 @@ bool ProcessGetCommits(CNode *node, const CommitsLocator &locator, const CNetMsg
 }
 
 namespace {
-bool vtx_eql(const std::vector<CTransactionRef> &a, const std::vector<CTransactionRef> &b) {
-  if (a == b) {
-    return true;
-  }
+bool CompareCommits(const std::vector<CTransactionRef> &a, const std::vector<CTransactionRef> &b) {
   if (a.size() != b.size()) {
     return false;
+  }
+  if (a == b) {
+    return true;
   }
   for (size_t i = 0; i < a.size(); ++i) {
     if (a[i]->GetHash() != b[i]->GetHash()) {
       return false;
-
     }
   }
   return true;
 }
-}
+}  // namespace
 
 bool ProcessNewCommits(CNode *node, const CommitsResponse &msg, const CNetMsgMaker &msgMaker,
                        const CChainParams &chainparams, CValidationState &err_state,
                        uint256 *failed_block_out) {
-  const auto err = [&] (int code, const std::string &str, const uint256 &block) {
+  const auto err = [&](int code, const std::string &str, const uint256 &block) {
     if (failed_block_out != nullptr) {
       *failed_block_out = block;
     }
@@ -176,7 +177,7 @@ bool ProcessNewCommits(CNode *node, const CommitsResponse &msg, const CNetMsgMak
       }
     }
   }
-  std::vector<const CBlockIndex*> to_download;
+  std::vector<const CBlockIndex *> to_download;
   const bool is_in_snapshot = snapshot::FindNextBlocksToDownload(node->GetId(), to_download);
   if (!is_in_snapshot) {
     assert(to_download.empty());
@@ -196,7 +197,7 @@ bool ProcessNewCommits(CNode *node, const CommitsResponse &msg, const CNetMsgMak
       return err(100, "bad-block-ordering", d.header.GetHash());
     }
     if (new_index->HasCommits()) {
-      if (!vtx_eql(new_index->GetCommits(), d.commits)) {
+      if (!CompareCommits(new_index->GetCommits(), d.commits)) {
         // This should be almost impossible with commits merkle root validation, check it just in case
         assert(not("not implemented"));
       }
@@ -245,7 +246,7 @@ namespace {
 const CBlockIndex *GetCheckpointIndex(uint32_t epoch,
                                       const CChain &chain,
                                       const esperanza::FinalizationState &fin_state) {
-  const auto h = fin_state.GetEpochHeight(epoch + 1) - 1;
+  const auto h = fin_state.GetEpochStartHeight(epoch + 1) - 1;
   const auto *index = chain[h];
   assert(index != nullptr);
   return index;
@@ -259,7 +260,7 @@ const CBlockIndex *FindLastFinalizedCheckpoint(const CChain &chain,
   }
   return GetCheckpointIndex(e, chain, fin_state);
 }
-}
+}  // namespace
 
 CommitsLocator GetCommitsLocator(const CBlockIndex *const start,
                                  const CBlockIndex *const stop) {
@@ -269,8 +270,10 @@ CommitsLocator GetCommitsLocator(const CBlockIndex *const start,
   }
   const auto fin_state = esperanza::FinalizationState::GetState(chainActive.Tip());
   assert(fin_state != nullptr);
+
   const CBlockIndex *finalized = FindLastFinalizedCheckpoint(chainActive, *fin_state);
   const CBlockIndex *last_index = nullptr;
+
   if (start == nullptr) {
     last_index = chainActive.Tip();
   } else {
@@ -279,12 +282,14 @@ CommitsLocator GetCommitsLocator(const CBlockIndex *const start,
       locator.start.push_back(last_index->GetBlockHash());
     }
   }
+
   assert(last_index != nullptr);
   for (const auto *index = last_index; index != nullptr && index->nHeight > finalized->nHeight; index = index->pprev) {
     if (fin_state->IsCheckpoint(index->nHeight)) {
       locator.start.push_back(index->GetBlockHash());
     }
   }
+
   locator.start.push_back(finalized->GetBlockHash());
   std::reverse(locator.start.begin(), locator.start.end());
   return locator;
@@ -304,11 +309,10 @@ void OnBlock(const uint256 &block_hash) {
     g_connman->ForNode(node_id, [index](CNode *node) {
       const CNetMsgMaker msgMaker(node->GetSendVersion());
       g_connman->PushMessage(node, msgMaker.Make(NetMsgType::GETCOMMITS, finalization::p2p::GetCommitsLocator(index, nullptr)));
-    return true;
+      return true;
     });
   }
 }
 
-
-} // p2p
-} // finalization
+}  // namespace p2p
+}  // namespace finalization

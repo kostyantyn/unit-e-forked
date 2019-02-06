@@ -5,9 +5,9 @@
 #ifndef UNITE_FINALIZATION_P2P
 #define UNITE_FINALIZATION_P2P
 
-#include <serialize.h>
-#include <primitives/block.h>
 #include <chainparams.h>
+#include <primitives/block.h>
+#include <serialize.h>
 
 /*
  * Implementation of UIP-21.
@@ -82,7 +82,7 @@ struct CommitsResponse {
   ADD_SERIALIZE_METHODS
   template <typename Stream, typename Operation>
   void SerializationOp(Stream &s, Operation ser_action) {
-    READWRITE(*(uint8_t*)&status);
+    READWRITE(*(uint8_t *)&status);
     READWRITE(data);
   }
 };
@@ -103,9 +103,10 @@ bool ProcessNewCommits(CNode *node, const CommitsResponse &commits, const CNetMs
 //! locator.stop = stop
 CommitsLocator GetCommitsLocator(const CBlockIndex *start, const CBlockIndex *stop);
 
+//! \brief Callback that must be called whenever we connect new block to any chain.
 void OnBlock(const uint256 &block_hash);
 
-} // p2p
-} // finalization
+}  // namespace p2p
+}  // namespace finalization
 
 #endif

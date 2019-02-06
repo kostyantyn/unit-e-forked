@@ -151,6 +151,9 @@ class FinalizationStateData {
  */
 class FinalizationState : public FinalizationStateData {
  public:
+  // Status is NEW when this onject is just created.
+  // It's changed to FROM_COMMITS when state processes finalizer commits.
+  // It's changed to CONFIRMED when satte processes finalizer commits from the real block.
   enum Status {
     NEW,
     FROM_COMMITS,
@@ -245,7 +248,7 @@ class FinalizationState : public FinalizationStateData {
   uint32_t GetEpoch(blockchain::Height blockHeight) const;
 
   //! \brief Returns the height of the first block of the epoch.
-  blockchain::Height GetEpochHeight(uint32_t epoch) const;
+  blockchain::Height GetEpochStartHeight(uint32_t epoch) const;
 
   static bool ValidateDepositAmount(CAmount amount);
 
@@ -273,15 +276,6 @@ class FinalizationState : public FinalizationStateData {
 
   //! \brief Returns the status of the state
   Status GetStatus() const;
-
-  //! \brief Returns whether this state is processed neither by block nor commits
-  bool IsNew() const;
-
-  //! \brief Returns whether this state is processed from commits
-  bool IsFromCommits() const;
-
-  //! \brief Returns whether this state is processed from full block
-  bool IsConfirmed() const;
 
  private:
   //!In case there is nobody available to finalize we finalize automatically.
@@ -315,7 +309,6 @@ class FinalizationState : public FinalizationStateData {
   ufp64::ufp64_t GetDepositScaleFactor(uint32_t epoch) const;
   uint64_t GetTotalSlashed(uint32_t epoch) const;
   Checkpoint &GetCheckpoint(uint32_t epoch);
-  const Checkpoint &GetCheckpoint(uint32_t epoch) const;
   uint64_t GetDynastyDelta(uint32_t dynasty);
   void RegisterLastTx(uint160 &validatorAddress, CTransactionRef tx);
   void ProcessNewCommit(const CTransactionRef &tx);
@@ -333,10 +326,10 @@ class FinalizationState : public FinalizationStateData {
 inline uint32_t GetEpochLength() { return FinalizationState::GetState()->GetEpochLength(); }
 inline uint32_t GetEpoch(const CBlockIndex &blockIndex) { return FinalizationState::GetState()->GetEpoch(blockIndex); }
 inline uint32_t GetEpoch(blockchain::Height blockHeight) { return FinalizationState::GetState()->GetEpoch(blockHeight); }
-inline blockchain::Height GetEpochHeight(uint32_t epoch) { return FinalizationState::GetState()->GetEpochHeight(epoch); }
+inline blockchain::Height GetEpochStartHeight(uint32_t epoch) { return FinalizationState::GetState()->GetEpochStartHeight(epoch); }
 inline uint32_t GetLastFinalizedEpoch() { return FinalizationState::GetState()->GetLastFinalizedEpoch(); }
 inline uint32_t GetCurrentEpoch() { return FinalizationState::GetState()->GetCurrentEpoch(); }
-inline bool IsCheckpoint(blockchain::Height blockHeight) { return FinalizationState::GetState()->IsCheckpoint(blockHeight); };
+inline bool IsCheckpoint(blockchain::Height block_height) { return FinalizationState::GetState()->IsCheckpoint(block_height); };
 
 }  // namespace esperanza
 
