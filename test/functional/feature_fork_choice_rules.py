@@ -50,7 +50,6 @@ class ForkChoiceRulesTest(UnitETestFramework):
         node0.generatetoaddress(1, node0.getnewaddress())
         self.sync_all()
 
-        # disable instant finalization
         Admin.authorize_and_disable(self, node0)
 
         payto = validator.getnewaddress('', 'legacy')
@@ -112,14 +111,14 @@ class ForkChoiceRulesTest(UnitETestFramework):
         #   /
         # 25
         #   \
-        #    - b26_0 - b27
+        #    - b26_0 - 27
         node2.generatetoaddress(1, node2.getnewaddress())
         connect_nodes(node2, node0.index)
         time.sleep(3)  # sync_blocks([node2, node0]) # replaced with sleep to see a crash
         disconnect_nodes(node2, node0.index)
         assert_equal(node0.getfinalizationstate()['lastJustifiedEpoch'], 5)
         assert_equal(node2.getfinalizationstate()['lastJustifiedEpoch'], 5)
-        self.log.info('node did not switch lo heaviest but less justified fork')
+        self.log.info('node did not switch to heaviest but less justified fork')
 
         self.log.info('test_fork_inside_dynasty passed')
 
