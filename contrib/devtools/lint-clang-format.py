@@ -39,6 +39,10 @@ def checkandupdate(filename, replace = False, addtogit = False):
           print(filename, "has been formatted")
     else:
       print(filename, "is not formatted")
+      print("****")
+      print(formatted)
+      print("****")
+      print(unformatted)
   return isformatted
 
 def help(argv):

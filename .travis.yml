@@ -1,6 +1,7 @@
 branches:
   only:
     - master
+    - debug_add_new_folders_to_clang_format
 sudo: required
 dist: trusty
 os: linux
