@@ -14,9 +14,8 @@ from test_framework.util import (
     connect_nodes,
     sync_blocks,
     sync_mempools,
+    wait_until,
 )
-from test_framework.regtest_mnemonics import regtest_mnemonics
-from test_framework.admin import Admin
 
 def generate_block(node):
     node.generatetoaddress(1, node.getnewaddress('', 'bech32'))
@@ -58,7 +57,7 @@ class FeatureFinalizerTest(UnitETestFramework):
         self.log.info("Check finalizer votes after restart")
         # Make sure vote is included
         sync_mempools([p, v])
-        assert(len(v.getrawmempool()) > 0)
+        wait_until(lambda: len(v.getrawmempool()) > 0)
         generate_block(p)
 
         assert_equal(p.getblockcount(), 32)
