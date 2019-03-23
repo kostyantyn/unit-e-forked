@@ -51,7 +51,11 @@ struct ValidatorState {
       m_phase = Phase::_from_integral(phase);
     }
     READWRITE(m_validator_address);
-    READWRITE(m_last_esperanza_tx);
+    bool has_tx = m_last_esperanza_tx != nullptr;
+    READWRITE(has_tx);
+    if (has_tx) {
+      READWRITE(m_last_esperanza_tx);
+    }
     READWRITE(m_vote_map);
     READWRITE(m_last_source_epoch);
     READWRITE(m_last_target_epoch);
