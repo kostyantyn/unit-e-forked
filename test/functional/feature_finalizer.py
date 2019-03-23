@@ -56,7 +56,6 @@ class FeatureFinalizerTest(UnitETestFramework):
 
         self.log.info("Check finalizer votes after restart")
         # Make sure vote is included
-        sync_mempools([p, v])
         wait_until(lambda: len(v.getrawmempool()) > 0)
         generate_block(p)
 
