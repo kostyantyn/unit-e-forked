@@ -159,7 +159,7 @@ void FinalizationState::IncrementDynasty() {
 
   // m_current_epoch >= 2 is needed as for the m_current_epoch=1
   // we don't have m_current_epoch - 2
-  if (m_current_epoch >= 2 && GetCheckpoint(m_current_epoch - 2).m_is_finalized) {
+  if (m_current_epoch > 2 && GetCheckpoint(m_current_epoch - 2).m_is_finalized) {
 
     m_current_dynasty += 1;
     m_prev_dyn_deposits = m_cur_dyn_deposits;
@@ -195,7 +195,7 @@ ufp64::ufp64_t FinalizationState::GetCollectiveRewardFactor() {
 }
 
 bool FinalizationState::DepositExists() const {
-  return m_cur_dyn_deposits > 0 && m_prev_dyn_deposits > 0;
+  return m_cur_dyn_deposits > 0;
 }
 
 ufp64::ufp64_t FinalizationState::GetSqrtOfTotalDeposits() const {
@@ -498,7 +498,7 @@ void FinalizationState::ProcessVote(const Vote &vote) {
   bool isTwoThirdsPrevDyn =
       prevDynastyVotes >= ufp64::div_to_uint(m_prev_dyn_deposits * 2, ufp64::to_ufp64(3));
 
-  bool enoughVotes = isTwoThirdsCurDyn && isTwoThirdsPrevDyn;
+  bool enoughVotes = isTwoThirdsCurDyn; // && isTwoThirdsPrevDyn;
 
   if (enoughVotes && !GetCheckpoint(targetEpoch).m_is_justified) {
 
@@ -1013,7 +1013,7 @@ uint64_t FinalizationState::GetTotalSlashed(uint32_t epoch) const {
   return it->second;
 }
 
-uint64_t FinalizationState::GetDynastyDelta(uint32_t dynasty) {
+CAmount FinalizationState::GetDynastyDelta(uint32_t dynasty) {
   const auto pair = m_dynasty_deltas.emplace(dynasty, 0);
   return pair.first->second;
 }
