@@ -492,13 +492,8 @@ void FinalizationState::ProcessVote(const Vote &vote) {
     ProcessReward(validatorAddress, reward);
   }
 
-  bool isTwoThirdsCurDyn =
+  bool enoughVotes =
       curDynastyVotes >= ufp64::div_to_uint(m_cur_dyn_deposits * 2, ufp64::to_ufp64(3));
-
-  bool isTwoThirdsPrevDyn =
-      prevDynastyVotes >= ufp64::div_to_uint(m_prev_dyn_deposits * 2, ufp64::to_ufp64(3));
-
-  bool enoughVotes = isTwoThirdsCurDyn; // && isTwoThirdsPrevDyn;
 
   if (enoughVotes && !GetCheckpoint(targetEpoch).m_is_justified) {
 
